@@ -97,20 +97,63 @@ alternate_sum_4_using_c_alternative:
 
 
 ; uint32_t alternate_sum_8(uint32_t x1, uint32_t x2, uint32_t x3, uint32_t x4, uint32_t x5, uint32_t x6, uint32_t x7, uint32_t x8);
-; registros y pila: x1[?], x2[?], x3[?], x4[?], x5[?], x6[?], x7[?], x8[?]
+; registros y pila: x1[EDI], x2[ESI], x3[EDX], x4[ECX], x5[R8D], x6[R9D], x7[RBP + 16], x8[RBP + 24]
 alternate_sum_8:
 	;prologo
+  push RBP ;pila alineada
+  MOV RBP, RSP ;armo stackframe
+  push R12 ; pila desalineada
+  push R13 ; pila alineada
+  push R14 ; pila desalineada
+  push R15 ; pila alineada, PRESERVO NO VOLATILES
 
-	; COMPLETAR
+  mov R12D, EDX ; guardo x3 que está en un registro volátil
+  mov R13D, ECX ; repito con x4, x5 y x6
+  mov R14D, R8D
+  mov R15D, R9D
+
+  call restar_c
+  ;recibe los parámetros por EDI y ESI y guarda el resultado en EAX
+  mov EDI, EAX ;muevo el resultado a EDI y el x3 a ESI para usarlos en la próxima suma
+  mov ESI, R12D
+
+  call sumar_c
+  mov EDI, EAX
+  mov ESI, R13D
+
+  call restar_c
+  mov EDI, EAX
+  mov ESI, R14D
+
+  call sumar_c
+  mov EDI, EAX
+  mov ESI, R15D
+
+  call restar_c
+  ;resultado final está en EAX
+  add EAX, [RBP + 16]
+  sub EAX, [RBP + 24]
 
 	;epilogo
+  pop R15
+  pop R14
+  pop R13
+  pop R12 ;restauro registros no volatiles
+  pop RBP ; pila desalineada, restauro RBP
 	ret
 
 
 ; SUGERENCIA: investigar uso de instrucciones para convertir enteros a floats y viceversa
 ;void product_2_f(uint32_t * destination, uint32_t x1, float f1);
-;registros: destination[?], x1[?], f1[?]
+;registros: destination[EDI], x1[ESI], f1[XMM0]
 product_2_f:
+  push rbp
+  mov rbp, rsp
+  cmp ESI, 0xefffffff
+  cvtsd2si EDX, xmm0
+
+  MUL ESI, EDX
+  mov [EDI], EAX
 	ret
 
 
