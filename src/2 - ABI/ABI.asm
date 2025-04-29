@@ -149,11 +149,13 @@ alternate_sum_8:
 product_2_f:
   push rbp
   mov rbp, rsp
-  cmp ESI, 0xefffffff
-  cvtsd2si EDX, xmm0
+  cvtss2sd xmm0, xmm0
+  cvtsi2sd xmm1, esi
 
-  MUL ESI, EDX
-  mov [EDI], EAX
+  MULsd xmm0, xmm1
+  cvttsd2si eax, xmm0
+  mov [RDI], EAX
+  pop rbp
 	ret
 
 
@@ -161,22 +163,60 @@ product_2_f:
 ;, uint32_t x1, float f1, uint32_t x2, float f2, uint32_t x3, float f3, uint32_t x4, float f4
 ;, uint32_t x5, float f5, uint32_t x6, float f6, uint32_t x7, float f7, uint32_t x8, float f8
 ;, uint32_t x9, float f9);
-;registros y pila: destination[rdi], x1[?], f1[?], x2[?], f2[?], x3[?], f3[?], x4[?], f4[?]
-;	, x5[?], f5[?], x6[?], f6[?], x7[?], f7[?], x8[?], f8[?],
-;	, x9[?], f9[?]
+;registros y pila: destination[rdi], x1[esi], f1[xmm0], x2[edx], f2[xmm1], x3[ecx], f3[xmm2], x4[r8d], f4[xmm3]
+;	, x5[r9d], f5[xmm4], x6[rbp + 16], f6[xmm5], x7[rbp + 24], f7[xmm6], x8[rbp + 32], f8[xmm7],
+;	, x9[rbp + 40], f9[rbp + 48]
 product_9_f:
 	;prologo
-	push rbp
+	push rbp ;pila alineada
 	mov rbp, rsp
 
 	;convertimos los flotantes de cada registro xmm en doubles
-	; COMPLETAR
+	cvtss2sd xmm0, xmm0
+  cvtss2sd xmm1, xmm1
+  cvtss2sd xmm2, xmm2
+  cvtss2sd xmm3, xmm3
+  cvtss2sd xmm4, xmm4
+  cvtss2sd xmm5, xmm5
+  cvtss2sd xmm6, xmm6
+  cvtss2sd xmm7, xmm7
 
 	;multiplicamos los doubles en xmm0 <- xmm0 * xmm1, xmmo * xmm2 , ...
-	; COMPLETAR
+	mulsd xmm0, xmm1  ;multiplico f1 * f2
+  mulsd xmm0, xmm2  ;multiplico f1 * f2 * f3
+  mulsd xmm0, xmm3  ;multiplico f1 * f2 * f3 * f4
+  mulsd xmm0, xmm4  ;multiplico f1 * f2 * f3 * f4 * f5
+  mulsd xmm0, xmm5  ;multiplico f1 * f2 * f3 * f4 * f5 * f6 
+  mulsd xmm0, xmm6  ;multiplico f1 * f2 * f3 * f4 * f5 * f6 * f7 
+  mulsd xmm0, xmm7  ;multiplico f1 * f2 * f3 * f4 * f5 * f6 * f7 * f8
+  movsd xmm1, [rbp + 48] ;muevo f9 a xmm1
+  cvtss2sd xmm1, xmm1 ; convierto f9 a double
+  mulsd xmm0, xmm1  ;multiplico f1 * f2 * f3 * f4 * f5 * f6 * f7 * f8 * f9 y se guarda en xmm0
 
 	; convertimos los enteros en doubles y los multiplicamos por xmm0.
-	; COMPLETAR
+	cvtsi2sd xmm1, esi  ;convierto x1 a double
+  cvtsi2sd xmm2, edx  ;convierto x2 a double
+  cvtsi2sd xmm3, ecx  ;convierto x3 a double
+  cvtsi2sd xmm4, r8d  ;convierto x4 a double
+  cvtsi2sd xmm5, r9d  ;convierto x5 a double
+  mulsd xmm0, xmm1  ;multiplico xmm0 * x1
+  mulsd xmm0, xmm2  ;multiplico xmm0 * x1 * x2
+  mulsd xmm0, xmm3  ;multiplico xmm0 * x1 * x2 * x3
+  mulsd xmm0, xmm4  ;multiplico xmm0 * x1 * x2 * x3 * x4
+  mulsd xmm0, xmm5  ;multiplico xmm0 * x1 * x2 * x3 * x4 * x5
+  mov esi, [rbp + 16] ;paso x6, x7, x8 y x9 a registros
+  mov edx, [rbp + 24]
+  mov ecx, [rbp + 32]
+  mov r8d, [rbp + 40]
+  cvtsi2sd xmm1, esi  ;convierto x6, x7, x8 y x9 a double
+  cvtsi2sd xmm2, edx
+  cvtsi2sd xmm3, ecx
+  cvtsi2sd xmm4, r8d
+  mulsd xmm0, xmm1  ;multiplico xmm0 * x1 * x2 * x3 * x4 * x5 * x6
+  mulsd xmm0, xmm2  ;multiplico xmm0 * x1 * x2 * x3 * x4 * x5 * x6 * x7
+  mulsd xmm0, xmm3  ;multiplico xmm0 * x1 * x2 * x3 * x4 * x5 * x6 * x7 * x8
+  mulsd xmm0, xmm4  ;multiplico xmm0 * x1 * x2 * x3 * x4 * x5 * x6 * x7 * x8 * x9
+  movsd [rdi], xmm0
 
 	; epilogo
 	pop rbp
