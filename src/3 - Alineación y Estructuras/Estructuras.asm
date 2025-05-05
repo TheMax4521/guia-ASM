@@ -29,7 +29,7 @@ global cantidad_total_de_elementos_packed
 
 ;########### DEFINICION DE FUNCIONES
 ;extern uint32_t cantidad_total_de_elementos(lista_t* lista);
-;registros: lista[?]
+;registros: lista[rdi]
 cantidad_total_de_elementos:
 	push rbp
 	mov rbp, rsp
@@ -57,5 +57,27 @@ cantidad_total_de_elementos:
 ;extern uint32_t cantidad_total_de_elementos_packed(packed_lista_t* lista);
 ;registros: lista[?]
 cantidad_total_de_elementos_packed:
+	push rbp
+	mov rbp, rsp
+	push r12
+	push r13
+	push r14
+	mov rax, [rdi + PACKED_LISTA_OFFSET_HEAD] ; rax  = nodo actual
+	xor ecx, ecx ; contrador total de elementos
+.bucle:
+	cmp rax, 0
+	je .fin
+	mov edx, dword [rax + PACKED_NODO_OFFSET_LONGITUD]; edx = longitrud del arreglo actual
+	add ecx, edx
+	mov r12, [rax + PACKED_NODO_OFFSET_NEXT]
+	mov rax, r12
+	jmp .bucle
+.fin:
+	mov eax, ecx
+	pop r14
+	pop r13
+	pop r12
+	pop rbp
+	ret
 	ret
 
